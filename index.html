@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DE10形ディーゼル機関車列車 運転シミュレータ</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <div class="container">
+        <h1>DE10形ディーゼル機関車列車 運転シミュレータ</h1>
+        <p class="subtitle">車両条件を変更すると、列車全体の速度、総抵抗と均衡速度をリアルタイムに計算・グラフ描画します。</p>
+
+        <div class="main-layout">
+            <div class="control-panel">
+
+                <div class="card">
+                    <h3>客車編成設定 (コロ軸受)</h3>
+                    <div class="input-group">
+                        <div class="label-val">
+                            <label for="passCount">客車両数</label>
+                            <span id="passCountVal">5</span><span> 両</span>
+                        </div>
+                        <input type="range" id="passCount" min="0" max="20" value="5">
+                    </div>
+                    <div class="input-group">
+                        <div class="label-val">
+                            <label for="passWeight">客車総重量</label>
+                            <span id="passWeightVal">200</span><span> トン</span>
+                        </div>
+                        <input type="range" id="passWeight" min="0" max="1000" step="10" value="200">
+                    </div>
+                </div>
+
+                <div class="card">
+                    <h3>貨車編成設定 (一般平軸受)</h3>
+                    <div class="input-group">
+                        <div class="label-val">
+                            <label for="freightCount">貨車両数</label>
+                            <span id="freightCountVal">0</span><span> 両</span>
+                        </div>
+                        <input type="range" id="freightCount" min="0" max="40" value="0">
+                    </div>
+                    <div class="input-group">
+                        <div class="label-val">
+                            <label for="freightWeight">貨車総重量</label>
+                            <span id="freightWeightVal">0</span><span> トン</span>
+                        </div>
+                        <input type="range" id="freightWeight" min="0" max="1500" step="10" value="0">
+                    </div>
+                </div>
+
+                <div class="card bg-dark">
+                    <h3>運転制御</h3>
+
+                    <button id="startBtn" class="btn-main">運転開始</button>
+
+                    <div class="input-group">
+                        <div class="label-val">
+                            <label for="notch">主幹制御器 (マスコン)</label>
+                            <span id="notchVal" class="text-main-green">0</span><span id="notchStatus" class="text-main-green"> (惰行)</span>
+                        </div>
+                        <input type="range" id="notch" min="0" max="14" value="0">
+                    </div>
+
+                    <div class="input-group highlight-group" style="margin-top: 15px;">
+                        <div class="label-val">
+                            <label for="currentSpeed">手動速度調整</label>
+                            <span id="currentSpeedVal">0</span><span> km/h</span>
+                        </div>
+                        <input type="range" id="currentSpeed" min="0" max="85" value="0">
+                    </div>
+                </div>
+
+            </div>
+
+            <div class="display-area">
+                <div class="meter-grid">
+                    <div class="meter-card highlight-meter">
+                        <div class="meter-title">速度計</div>
+                        <div class="meter-value text-purple" id="dispCurrentSpeed">0.0 <span class="m-unit">km/h</span></div>
+                        <div class="meter-sub">リアルタイム列車速度</div>
+                    </div>
+                    <div class="meter-card">
+                        <div class="meter-title">列車総重量</div>
+                        <div class="meter-value" id="dispTotalWeight">--- <span class="m-unit">t</span></div>
+                        <div class="meter-sub">機関車(65t)含む</div>
+                    </div>
+                    <div class="meter-card">
+                        <div class="meter-title">総走行抵抗</div>
+                        <div class="meter-value text-res-red" id="dispTotalRes">--- <span class="m-unit">kg</span></div>
+                        <div class="meter-sub">機関車+被牽引車両の合計</div>
+                    </div>
+                    <div class="meter-card" id="tractiveCard">
+                        <div class="meter-title">DE10引張力</div>
+                        <div class="meter-value text-trac-green" id="dispTractive">--- <span class="m-unit">kg</span></div>
+                        <div class="meter-sub" id="dispTractiveSub">惰行中</div>
+                    </div>
+                    <div class="meter-card" id="balanceCard">
+                        <div class="meter-title">列車加速状態</div>
+                        <div class="meter-value" id="dispStatus">---</div>
+                        <div class="meter-sub" id="dispStatusSub">引張力 vs 抵抗</div>
+                    </div>
+                </div>
+
+                <div class="graph-container">
+                    <canvas id="trainChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script src="app.js"></script>
+</body>
+</html>
