@@ -1,5 +1,5 @@
 // ==========================================
-// 1. 車両諸元
+// 1. 車両諸元定義 (DE10・客車・貨車)
 // ==========================================
 const VEHICLE_DATA = {
   locomotive: { weight: 65.0 }, // DE10 (65t)
@@ -57,13 +57,19 @@ const TRACTION_DATA = {
   }
 };
 
+// ==========================================
+// 3. 状態管理変数
+// ==========================================
 let currentMode = "mainline";
 let currentNotch = 0;
 let currentSpeed = 0.0;
+let isBraking = false;
+let simRate = 1.0; // 倍速設定 (1x, 2x, 5x)
+let lastTimestamp = performance.now();
 let chartInstance = null;
 
 // ==========================================
-// 3. 物理・力学計算
+// 4. 引張力・走行抵抗・均衡速度の計算
 // ==========================================
 function getTractiveEffort(speed, notch, mode = currentMode) {
   if (notch <= 0) return 0;
@@ -86,6 +92,7 @@ function getTractiveEffort(speed, notch, mode = currentMode) {
 
 function calculateRunningResistance(speed) {
   const locoWeight = VEHICLE_DATA.locomotive.weight;
+  // 機関車抵抗 (DE10形公式 近似)
   const r_loco = (1.8 + 0.015 * speed + 0.00035 * speed * speed) * locoWeight;
 
   const carTypeKey = document.getElementById("car-type")?.value || "12kei";
@@ -102,6 +109,7 @@ function calculateRunningResistance(speed) {
     }
   }
 
+  // 勾配抵抗 (kgf) = 総重量(t) * 勾配(‰)
   const gradient = parseFloat(document.getElementById("gradient-slider")?.value) || 0;
   const r_grade = (locoWeight + totalCarWeight) * gradient;
 
@@ -123,25 +131,119 @@ function calculateBalancingSpeed() {
 }
 
 // ==========================================
-// 4. チャート初期化 & データ更新
+// 5. リアルタイム物理シミュレーションループ
 // ==========================================
-function initChart() {
-  if (typeof Chart === "undefined") {
-    console.error("Chart.js が読み込まれていません。");
-    const errorMsg = document.getElementById("chart-error-msg");
-    if (errorMsg) errorMsg.style.display = "block";
-    return;
+function simulationLoop(now) {
+  // 経過秒数 (dt) の算出（極端なラグ時のワープ防止のため最大0.1秒に制限）
+  const dt = Math.min((now - lastTimestamp) / 1000, 0.1) * simRate;
+  lastTimestamp = now;
+
+  const maxLimit = TRACTION_DATA[currentMode].maxSpeed;
+  const te = getTractiveEffort(currentSpeed, currentNotch, currentMode);
+  const rr = calculateRunningResistance(currentSpeed);
+
+  // 編成総重量 (t) の算出
+  const carTypeKey = document.getElementById("car-type")?.value || "12kei";
+  const carCount = parseInt(document.getElementById("car-count")?.value, 10) || 0;
+  const carSpec = VEHICLE_DATA.carTypes[carTypeKey];
+  const totalWeight = VEHICLE_DATA.locomotive.weight + (carSpec.weight * carCount);
+
+  // 有効加速力 (kgf)
+  let netForce = te - rr;
+
+  // ブレーキ時の減速力加算
+  if (isBraking) {
+    netForce -= totalWeight * 90; // 約90kg/t (減速度 約2.9 km/h/s)
   }
 
-  const canvas = document.getElementById("tractionChart");
-  if (!canvas) return;
-  const ctx = canvas.getContext("2d");
+  // 停止中の後退防止
+  if (currentSpeed <= 0.02 && netForce < 0) {
+    netForce = 0;
+    currentSpeed = 0;
+  }
 
-  // 初期データ (本線 0-85 km/h) をあらかじめ構築
+  // 国鉄標準加速度計算式: α (km/h/s) = F_net / (30.93 * W)
+  let acceleration = 0;
+  if (totalWeight > 0) {
+    acceleration = netForce / (30.93 * totalWeight);
+  }
+
+  // 速度の積分 (v = v + α * dt)
+  currentSpeed += acceleration * dt;
+
+  // 速度リミット (0 〜 maxSpeed)
+  if (currentSpeed < 0) currentSpeed = 0;
+  if (currentSpeed > maxLimit) currentSpeed = maxLimit;
+
+  // 画面の計器類を更新
+  updateGauges(te, rr, acceleration, netForce);
+
+  // 次フレームの呼び出し
+  requestAnimationFrame(simulationLoop);
+}
+
+// ==========================================
+// 6. UI計器盤の更新
+// ==========================================
+function updateGauges(te, rr, acceleration, netForce) {
+  // 速度表示
+  const speedElem = document.getElementById("display-speed");
+  const speedSlider = document.getElementById("speed-slider");
+  const speedVal = document.getElementById("speed-val");
+
+  if (speedElem) speedElem.innerHTML = `${currentSpeed.toFixed(1)} <small>km/h</small>`;
+  if (speedSlider) speedSlider.value = currentSpeed.toFixed(1);
+  if (speedVal) speedVal.textContent = `${currentSpeed.toFixed(1)} km/h`;
+
+  // 加速度・余力表示
+  const accelElem = document.getElementById("display-acceleration");
+  const netForceElem = document.getElementById("display-netforce");
+  if (accelElem) {
+    const sign = acceleration >= 0 ? "+" : "";
+    accelElem.innerHTML = `${sign}${acceleration.toFixed(2)} <small>km/h/s</small>`;
+  }
+  if (netForceElem) {
+    const sign = netForce >= 0 ? "+" : "";
+    netForceElem.textContent = `加速余力: ${sign}${Math.round(netForce)} kgf`;
+  }
+
+  // 引張力・抵抗表示
+  const teElem = document.getElementById("display-traction");
+  if (teElem) teElem.innerHTML = `${Math.round(te)} <small>kgf</small>`;
+
+  const rrElem = document.getElementById("display-resistance");
+  if (rrElem) rrElem.innerHTML = `${Math.round(rr)} <small>kgf</small>`;
+
+  // 均衡速度表示
+  const balSpeed = calculateBalancingSpeed();
+  const balElem = document.getElementById("display-balancing");
+  if (balElem) {
+    balElem.innerHTML = currentNotch > 0 ? `${balSpeed.toFixed(1)} <small>km/h</small>` : "--- <small>km/h</small>";
+  }
+}
+
+// グラフ再描画（操作変更時のみ実行）
+function updateChart() {
+  if (!chartInstance) return;
+
+  const maxSpeed = TRACTION_DATA[currentMode].maxSpeed;
+  const labels = Array.from({ length: maxSpeed + 1 }, (_, i) => i);
+  const teData = labels.map(v => getTractiveEffort(v, currentNotch, currentMode));
+  const rrData = labels.map(v => Math.round(calculateRunningResistance(v)));
+
+  chartInstance.data.labels = labels;
+  chartInstance.data.datasets[0].data = teData;
+  chartInstance.data.datasets[1].data = rrData;
+  chartInstance.update();
+}
+
+function initChart() {
+  const canvas = document.getElementById("tractionChart");
+  if (!canvas || typeof Chart === "undefined") return;
+
+  const ctx = canvas.getContext("2d");
   const maxSpeed = TRACTION_DATA[currentMode].maxSpeed;
   const initialLabels = Array.from({ length: maxSpeed + 1 }, (_, i) => i);
-  const initialTeData = initialLabels.map(v => getTractiveEffort(v, currentNotch, currentMode));
-  const initialRrData = initialLabels.map(v => Math.round(calculateRunningResistance(v)));
 
   chartInstance = new Chart(ctx, {
     type: "line",
@@ -150,7 +252,7 @@ function initChart() {
       datasets: [
         {
           label: "引張力 (選択ノッチ)",
-          data: initialTeData,
+          data: initialLabels.map(v => getTractiveEffort(v, currentNotch, currentMode)),
           borderColor: "#f85149",
           backgroundColor: "rgba(248, 81, 73, 0.15)",
           borderWidth: 2.5,
@@ -160,7 +262,7 @@ function initChart() {
         },
         {
           label: "総走行抵抗 (勾配抵抗込)",
-          data: initialRrData,
+          data: initialLabels.map(v => Math.round(calculateRunningResistance(v))),
           borderColor: "#388bfd",
           backgroundColor: "rgba(56, 139, 253, 0.1)",
           borderWidth: 2,
@@ -172,7 +274,7 @@ function initChart() {
     options: {
       responsive: true,
       maintainAspectRatio: false,
-      animation: false, // 切り替え時の追従をスムーズに
+      animation: false,
       scales: {
         x: {
           title: { display: true, text: "速度 (km/h)", color: "#8b949e" },
@@ -188,64 +290,14 @@ function initChart() {
         }
       },
       plugins: {
-        legend: {
-          labels: { color: "#e0e6ed" }
-        }
+        legend: { labels: { color: "#e0e6ed" } }
       }
     }
   });
 }
 
-function updateChart() {
-  if (!chartInstance) return;
-
-  const maxSpeed = TRACTION_DATA[currentMode].maxSpeed; // 入換時は 45, 本線時は 85
-  const labels = Array.from({ length: maxSpeed + 1 }, (_, i) => i);
-  const teData = labels.map(v => getTractiveEffort(v, currentNotch, currentMode));
-  const rrData = labels.map(v => Math.round(calculateRunningResistance(v)));
-
-  // labels を 0〜45 (または 0〜85) に更新することで X軸の表示幅を制限
-  chartInstance.data.labels = labels;
-  chartInstance.data.datasets[0].data = teData;
-  chartInstance.data.datasets[1].data = rrData;
-  chartInstance.update();
-}
-
 // ==========================================
-// 5. 画面UI更新
-// ==========================================
-function updateSimulator() {
-  const modeData = TRACTION_DATA[currentMode];
-  const maxLimit = modeData.maxSpeed;
-
-  if (currentSpeed > maxLimit) {
-    currentSpeed = maxLimit;
-    const speedSlider = document.getElementById("speed-slider");
-    if (speedSlider) speedSlider.value = maxLimit;
-  }
-
-  const te = getTractiveEffort(currentSpeed, currentNotch, currentMode);
-  const rr = calculateRunningResistance(currentSpeed);
-  const balSpeed = calculateBalancingSpeed();
-  const accelForce = currentNotch > 0 ? te - rr : -rr;
-
-  document.getElementById("display-notch").textContent = currentNotch === 0 ? "0 (惰行)" : `${currentNotch} 段`;
-  document.getElementById("display-speed").innerHTML = `${currentSpeed.toFixed(1)} <small>km/h</small>`;
-  document.getElementById("display-traction").innerHTML = `${Math.round(te)} <small>kgf</small>`;
-  document.getElementById("display-resistance").innerHTML = `${Math.round(rr)} <small>kgf</small>`;
-  document.getElementById("display-balancing").innerHTML = currentNotch > 0 ? `${balSpeed.toFixed(1)} <small>km/h</small>` : "--- <small>km/h</small>";
-  
-  const accelElem = document.getElementById("display-acceleration");
-  if (accelElem) {
-    const sign = accelForce >= 0 ? "+" : "";
-    accelElem.textContent = `加速力: ${sign}${Math.round(accelForce)} kgf`;
-  }
-
-  updateChart();
-}
-
-// ==========================================
-// 6. イベントバインド
+// 7. イベントバインド
 // ==========================================
 function setupEventListeners() {
   // 本線 / 入換 切り替え
@@ -255,25 +307,15 @@ function setupEventListeners() {
       const isShunting = currentMode === "shunting";
       const maxLimit = TRACTION_DATA[currentMode].maxSpeed;
 
-      // テーマクラス切り替え
       document.body.className = isShunting ? "mode-shunting" : "mode-mainline";
-
       document.getElementById("chart-badge").textContent = isShunting ? "入換段 (0-45 km/h)" : "本線段 (0-85 km/h)";
       document.getElementById("display-mode-name").textContent = isShunting ? "入換ギア接続中" : "本線ギア接続中";
       document.getElementById("display-speed-limit").textContent = `最高許容: ${maxLimit} km/h`;
 
-      // 速度スライダーの上限を 45 または 85 に制限
       const speedSlider = document.getElementById("speed-slider");
-      if (speedSlider) {
-        speedSlider.max = maxLimit;
-        if (currentSpeed > maxLimit) {
-          currentSpeed = maxLimit;
-          speedSlider.value = maxLimit;
-          document.getElementById("speed-val").textContent = `${maxLimit.toFixed(1)} km/h`;
-        }
-      }
+      if (speedSlider) speedSlider.max = maxLimit;
 
-      updateSimulator();
+      updateChart();
     });
   });
 
@@ -281,29 +323,61 @@ function setupEventListeners() {
   document.getElementById("notch-slider")?.addEventListener("input", (e) => {
     currentNotch = parseInt(e.target.value, 10);
     document.getElementById("notch-val").textContent = currentNotch === 0 ? "0 段 (OFF)" : `${currentNotch} 段`;
-    updateSimulator();
+    document.getElementById("display-notch").textContent = currentNotch === 0 ? "0 (惰行)" : `${currentNotch} 段`;
+    updateChart();
   });
 
-  // 速度スライダー
+  // 速度スライダー（任意位置への手動ドラッグ）
   document.getElementById("speed-slider")?.addEventListener("input", (e) => {
     currentSpeed = parseFloat(e.target.value);
-    document.getElementById("speed-val").textContent = `${currentSpeed.toFixed(1)} km/h`;
-    updateSimulator();
+  });
+
+  // ブレーキボタン (長押しで制動)
+  const brakeBtn = document.getElementById("btn-brake");
+  if (brakeBtn) {
+    const applyBrake = () => { isBraking = true; brakeBtn.classList.add("active"); };
+    const releaseBrake = () => { isBraking = false; brakeBtn.classList.remove("active"); };
+    brakeBtn.addEventListener("mousedown", applyBrake);
+    brakeBtn.addEventListener("mouseup", releaseBrake);
+    brakeBtn.addEventListener("mouseleave", releaseBrake);
+    brakeBtn.addEventListener("touchstart", (e) => { e.preventDefault(); applyBrake(); });
+    brakeBtn.addEventListener("touchend", releaseBrake);
+  }
+
+  // 即時停車ボタン
+  document.getElementById("btn-stop")?.addEventListener("click", () => {
+    currentSpeed = 0;
+    currentNotch = 0;
+    const notchSlider = document.getElementById("notch-slider");
+    if (notchSlider) notchSlider.value = 0;
+    document.getElementById("notch-val").textContent = "0 段 (OFF)";
+    document.getElementById("display-notch").textContent = "0 (惰行)";
+    updateChart();
+  });
+
+  // シミュレーション速度倍率切替 (1x / 2x / 5x)
+  document.querySelectorAll(".btn-times").forEach((btn) => {
+    btn.addEventListener("click", (e) => {
+      document.querySelectorAll(".btn-times").forEach(b => b.classList.remove("active"));
+      btn.classList.add("active");
+      simRate = parseFloat(btn.dataset.rate);
+      document.getElementById("sim-speed-val").textContent = `${simRate}x (${simRate === 1 ? "等倍速" : "高速検証"})`;
+    });
   });
 
   // 車両形式・両数・勾配
-  document.getElementById("car-type")?.addEventListener("change", updateSimulator);
+  document.getElementById("car-type")?.addEventListener("change", updateChart);
 
   document.getElementById("car-count")?.addEventListener("input", (e) => {
     document.getElementById("car-count-val").textContent = `${e.target.value} 両`;
-    updateSimulator();
+    updateChart();
   });
 
   document.getElementById("gradient-slider")?.addEventListener("input", (e) => {
     const val = parseFloat(e.target.value);
     const text = val === 0 ? "0.0 ‰ (平坦)" : `${val > 0 ? "+" : ""}${val.toFixed(1)} ‰`;
     document.getElementById("gradient-val").textContent = text;
-    updateSimulator();
+    updateChart();
   });
 }
 
@@ -311,5 +385,7 @@ function setupEventListeners() {
 document.addEventListener("DOMContentLoaded", () => {
   initChart();
   setupEventListeners();
-  updateSimulator();
+  updateChart();
+  // リアルタイム物理ループの開始
+  requestAnimationFrame(simulationLoop);
 });
