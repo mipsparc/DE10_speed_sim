@@ -13,7 +13,6 @@ body {
   transition: border-top 0.3s ease;
 }
 
-/* 本線・入換のテーマ枠線 */
 body.mode-mainline {
   border-top: 5px solid #0d6efd;
 }
@@ -27,7 +26,6 @@ body.mode-shunting {
   margin: 0 auto;
 }
 
-/* ヘッダー */
 header {
   display: flex;
   justify-content: space-between;
@@ -51,7 +49,6 @@ header {
   margin-top: 4px;
 }
 
-/* 運転モード切り替えボタン */
 .mode-selector-panel {
   display: flex;
   flex-direction: column;
@@ -63,7 +60,6 @@ header {
   font-size: 0.75rem;
   color: #8b949e;
   text-transform: uppercase;
-  letter-spacing: 0.5px;
 }
 
 .gear-toggle-group {
@@ -85,24 +81,21 @@ header {
   cursor: pointer;
   border-radius: 6px;
   color: #8b949e;
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: all 0.2s ease;
 }
 
-/* 本線アクティブ */
 #mode-mainline:checked + .btn-mainline {
   background-color: #0d6efd;
   color: #ffffff;
-  box-shadow: 0 0 12px rgba(13, 110, 253, 0.5);
+  box-shadow: 0 0 10px rgba(13, 110, 253, 0.5);
 }
 
-/* 入換アクティブ (警戒色) */
 #mode-shunting:checked + .btn-shunting {
   background-color: #fd7e14;
   color: #ffffff;
-  box-shadow: 0 0 12px rgba(253, 126, 20, 0.5);
+  box-shadow: 0 0 10px rgba(253, 126, 20, 0.5);
 }
 
-/* 計器盤 */
 .dashboard-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
@@ -144,23 +137,11 @@ header {
   color: #8b949e;
 }
 
-.gauge-value.highlight {
-  color: #58a6ff;
-}
+.gauge-value.highlight { color: #58a6ff; }
+.gauge-value.text-red { color: #f85149; }
+.gauge-value.text-blue { color: #388bfd; }
+.gauge-value.text-green { color: #3fb950; }
 
-.gauge-value.text-red {
-  color: #f85149;
-}
-
-.gauge-value.text-blue {
-  color: #388bfd;
-}
-
-.gauge-value.text-green {
-  color: #3fb950;
-}
-
-/* メインレイアウト */
 .main-layout {
   display: grid;
   grid-template-columns: 360px 1fr;
@@ -173,7 +154,6 @@ header {
   }
 }
 
-/* 設定パネル */
 .control-panel {
   background: #1c2128;
   border: 1px solid #30363d;
@@ -242,7 +222,6 @@ select {
   outline: none;
 }
 
-/* グラフ枠 */
 .chart-wrapper {
   background: #1c2128;
   border: 1px solid #30363d;
@@ -283,8 +262,22 @@ select {
   border: 1px solid rgba(253, 126, 20, 0.4);
 }
 
+/* 修正点: 高さを確実に確保 */
 .canvas-container {
   position: relative;
-  flex-grow: 1;
-  min-height: 420px;
+  width: 100%;
+  height: 440px; /* 明示的な固定高さを設定 */
+}
+
+.chart-error {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  color: #f85149;
+  font-weight: bold;
+  text-align: center;
+  background: rgba(0, 0, 0, 0.7);
+  padding: 16px;
+  border-radius: 8px;
 }
