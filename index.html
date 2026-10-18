@@ -5,8 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>DE10形ディーゼル機関車 運転シミュレータ</title>
   <link rel="stylesheet" href="style.css">
-  <!-- Chart.js CDN -->
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <!-- Chart.js CDN (v4) -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 </head>
 <body class="mode-mainline">
   <div class="container">
@@ -27,7 +27,7 @@
       </div>
     </header>
 
-    <!-- 計器盤・ダッシュボード -->
+    <!-- 計器盤 -->
     <section class="dashboard-grid">
       <div class="gauge-card">
         <span class="gauge-label">主幹制御器 (ノッチ)</span>
@@ -51,7 +51,7 @@
       </div>
       <div class="gauge-card">
         <span class="gauge-label">算出 均衡速度</span>
-        <div class="gauge-value text-green" id="display-balancing">0.0 <small>km/h</small></div>
+        <div class="gauge-value text-green" id="display-balancing">--- <small>km/h</small></div>
         <div class="gauge-sub" id="display-acceleration">加速力: ±0 kgf</div>
       </div>
     </section>
@@ -65,7 +65,7 @@
         <div class="control-group">
           <div class="control-header">
             <label for="notch-slider">マスコンノッチ</label>
-            <span class="control-val" id="notch-val">0 段</span>
+            <span class="control-val" id="notch-val">0 段 (OFF)</span>
           </div>
           <input type="range" id="notch-slider" min="0" max="14" step="1" value="0">
           <div class="scale-ticks">
@@ -82,7 +82,7 @@
           <input type="range" id="speed-slider" min="0" max="85" step="0.5" value="0">
         </div>
 
-        <!-- 車両形式選択 (data.jsonの諸元) -->
+        <!-- 車両形式選択 -->
         <div class="control-group">
           <label for="car-type">被牽引車両形式</label>
           <select id="car-type">
@@ -91,4 +91,45 @@
             <option value="50kei">50系客車 (コロ軸受・自重28.0t)</option>
             <option value="koki50000">コキ50000系 (積車・44.0t)</option>
             <option value="koki_empty">コキ50000系 (空車・15.0t)</option>
-            <option value="wam80000">ワム80000
+            <option value="wam80000">ワム80000形 (平軸受貨車・積車25.0t)</option>
+          </select>
+        </div>
+
+        <!-- 連結両数 -->
+        <div class="control-group">
+          <div class="control-header">
+            <label for="car-count">連結両数</label>
+            <span class="control-val" id="car-count-val">5 両</span>
+          </div>
+          <input type="range" id="car-count" min="0" max="25" step="1" value="5">
+        </div>
+
+        <!-- 線路勾配 -->
+        <div class="control-group">
+          <div class="control-header">
+            <label for="gradient-slider">線路勾配 (‰)</label>
+            <span class="control-val" id="gradient-val">0.0 ‰ (平坦)</span>
+          </div>
+          <input type="range" id="gradient-slider" min="-35" max="35" step="0.5" value="0">
+        </div>
+      </section>
+
+      <!-- グラフ描画エリア -->
+      <section class="chart-wrapper">
+        <div class="chart-header">
+          <h2>引張力・走行抵抗 性能曲線</h2>
+          <div class="chart-legend-badge" id="chart-badge">本線段 (0-85 km/h)</div>
+        </div>
+        <div class="canvas-container">
+          <canvas id="tractionChart"></canvas>
+          <div id="chart-error-msg" class="chart-error" style="display: none;">
+            Chart.js が読み込めませんでした。インターネット接続を確認してください。
+          </div>
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>
