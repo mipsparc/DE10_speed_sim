@@ -1,393 +1,290 @@
-:root {
-    --bg-color: #f1f5f9;
-    --card-bg: #ffffff;
-    --card-dark-bg: #f8fafc;
-    --text-main: #0f172a;
-    --text-muted: #64748b;
-    --accent-main: #0E5E55;    /* DE10運転席グリーン */
-
-    --accent-res-red: #dc2626;
-    --accent-trac-green: #10b981;
-    --accent-pin-purple: #7c3aed; /* スピードメーターのテーマカラー */
-    --border-color: #e2e8f0;
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
 }
 
 body {
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-    background-color: var(--bg-color);
-    color: var(--text-main);
-    margin: 0;
-    padding: 20px;
-    display: flex;
-    justify-content: center;
+  background-color: #121418;
+  color: #e0e6ed;
+  padding: 24px 16px;
+  min-height: 100vh;
+  transition: border-top 0.3s ease;
+}
+
+/* 本線・入換のテーマ枠線 */
+body.mode-mainline {
+  border-top: 5px solid #0d6efd;
+}
+
+body.mode-shunting {
+  border-top: 5px solid #fd7e14;
 }
 
 .container {
-    width: 100%;
-    max-width: 1300px;
-    background: var(--card-bg);
-    padding: 25px;
-    border-radius: 16px;
-    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.05);
+  max-width: 1200px;
+  margin: 0 auto;
 }
 
-h1 {
-    margin-top: 0;
-    font-size: 24px;
-    font-weight: 700;
-    letter-spacing: -0.5px;
-    color: var(--text-main);
+/* ヘッダー */
+header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin-bottom: 24px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid #2d333b;
+}
+
+.header-title h1 {
+  font-size: 1.6rem;
+  font-weight: 700;
+  color: #ffffff;
 }
 
 .subtitle {
-    color: var(--text-muted);
-    margin-bottom: 25px;
-    font-size: 14px;
+  font-size: 0.85rem;
+  color: #8b949e;
+  margin-top: 4px;
 }
 
-.main-layout {
-    display: grid;
-    grid-template-columns: 380px 1fr;
-    gap: 25px;
-}
-
-@media (max-width: 1000px) {
-    .main-layout {
-        grid-template-columns: 1fr;
-    }
-}
-
-/* 【新設】スタートボタンのカスタムデザイン */
-.btn-main {
-    background-color: var(--accent-main);
-    color: white;
-    border: none;
-    padding: 12px;
-    border-radius: 8px;
-    font-size: 15px;
-    font-weight: 700;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    margin-bottom: 15px;
-    width: 100%;
-    box-shadow: 0 4px 6px -1px rgba(14, 94, 85, 0.2);
-}
-.btn-main:hover {
-    background-color: #0a443e;
-    box-shadow: 0 6px 8px -1px rgba(14, 94, 85, 0.3);
-}
-.btn-main:active {
-    transform: scale(0.98);
-}
-.btn-main.running {
-    background-color: var(--accent-res-red);
-    box-shadow: 0 4px 6px -1px rgba(220, 38, 38, 0.2);
-}
-.btn-main.running:hover {
-    background-color: #b91c1c;
-    box-shadow: 0 6px 8px -1px rgba(220, 38, 38, 0.3);
-}
-
-/* カード構造 */
-.card {
-    background: var(--card-dark-bg);
-    border: 1px solid var(--border-color);
-    padding: 18px;
-    border-radius: 12px;
-    margin-bottom: 16px;
-}
-
-.card h3 {
-    margin-top: 0;
-    margin-bottom: 14px;
-    font-size: 15px;
-    font-weight: 600;
-    color: var(--text-main);
-    border-left: 3px solid var(--accent-main);
-    padding-left: 8px;
-}
-
-.bg-dark {
-    background: #f1f5f9;
-}
-
-.border-highlight {
-    border-color: var(--accent-pin-purple);
-}
-
-/* コントロールパネル群 */
-.control-panel {
-    display: flex;
-    flex-direction: column;
-}
-
-.input-group {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-    margin-bottom: 12px;
-}
-
-.input-group:last-child {
-    margin-bottom: 0;
-}
-
-.label-val {
-    display: flex;
-    justify-content: space-between;
-    font-size: 13px;
-    font-weight: 500;
-    color: var(--text-muted);
-}
-
-.label-val span:nth-child(2) {
-    color: var(--accent-main);
-    font-size: 15px;
-    font-weight: 600;
-}
-
-.text-main-green {
-    color: var(--accent-main) !important;
-}
-
-/* カスタムラジオトグル */
-.radio-tile-group {
-    display: flex;
-    gap: 10px;
-}
-
-.input-container {
-    position: relative;
-    flex: 1;
-}
-
-.input-container input {
-    position: absolute;
-    height: 100%;
-    width: 100%;
-    margin: 0;
-    cursor: pointer;
-    opacity: 0;
-    z-index: 2;
-}
-
-.radio-tile {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    padding: 10px;
-    border: 1px solid var(--border-color);
-    border-radius: 6px;
-    background: var(--card-bg);
-    transition: all 0.2s;
-    font-size: 13px;
-    font-weight: 600;
-    text-align: center;
-    color: var(--text-main);
-}
-
-.input-container input:checked + .radio-tile {
-    border-color: var(--accent-main);
-    background: rgba(14, 94, 85, 0.08);
-    color: var(--accent-main);
-}
-
-/* スライドバーカスタム */
-input[type="range"] {
-    -webkit-appearance: none;
-    width: 100%;
-    height: 5px;
-    background: var(--border-color);
-    border-radius: 4px;
-    outline: none;
-}
-
-input[type="range"]::-webkit-slider-thumb {
-    -webkit-appearance: none;
-    width: 16px;
-    height: 16px;
-    border-radius: 50%;
-    background: var(--accent-main);
-    cursor: pointer;
-    transition: transform 0.1s;
-}
-
-input[type="range"]::-webkit-slider-thumb:hover {
-    transform: scale(1.2);
-}
-
-.highlight-group .label-val span:nth-child(2) {
-    color: var(--accent-pin-purple);
-}
-.highlight-group input[type="range"]::-webkit-slider-thumb {
-    background: var(--accent-pin-purple);
-}
-
-/* デジタルメーター群 */
-.display-area {
-    display: flex;
-    flex-direction: column;
-    gap: 20px;
-}
-
-.meter-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-    gap: 12px;
-}
-
-.meter-card {
-    background: var(--card-dark-bg);
-    border: 1px solid var(--border-color);
-    border-radius: 12px;
-    padding: 14px;
-    text-align: center;
-}
-
-/* 【新設】スピードメーター用の強調ハイライト */
-.highlight-meter {
-    border-color: var(--accent-pin-purple) !important;
-    background: rgba(124, 58, 237, 0.03) !important;
-    box-shadow: inset 0 0 10px rgba(124, 58, 237, 0.02);
-}
-
-.meter-title {
-    font-size: 11px;
-    color: var(--text-muted);
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    margin-bottom: 6px;
-}
-
-.meter-value {
-    font-size: 26px;
-    font-weight: 700;
-    color: var(--text-main);
-}
-
-.m-unit {
-    font-size: 13px;
-    font-weight: 500;
-    color: var(--text-muted);
-}
-
-.meter-sub {
-    font-size: 11px;
-    color: var(--text-muted);
-    margin-top: 4px;
-}
-
-.text-res-red { color: var(--accent-res-red) !important; }
-.text-trac-green { color: var(--accent-main) !important; }
-.text-purple { color: var(--accent-pin-purple) !important; }
-
-/* グラフコンテナ */
-.graph-container {
-    background: var(--card-bg);
-    border: 1px solid var(--border-color);
-    border-radius: 12px;
-    padding: 20px;
-    flex: 1;
-    min-height: 420px;
-    position: relative;
-}
-
-* --- 運転モード切替コンテナ --- */
-.mode-switch-container {
+/* 運転モード切り替えボタン */
+.mode-selector-panel {
   display: flex;
-  align-items: center;
-  gap: 12px;
-  margin-bottom: 20px;
-  background: #f1f3f5;
-  padding: 10px 16px;
-  border-radius: 8px;
-  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.1);
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
 }
 
-.mode-switch-label {
-  font-weight: bold;
-  font-size: 0.95rem;
-  color: #333;
-}
-
-/* トグルボタン（セグメントコントロール） */
-.mode-toggle-group {
-  display: inline-flex;
-  background: #e9ecef;
-  padding: 3px;
-  border-radius: 6px;
-  border: 1px solid #ced4da;
-}
-
-.mode-toggle-group input[type="radio"] {
-  display: none;
-}
-
-.mode-toggle-group label {
-  padding: 6px 18px;
-  font-size: 0.9rem;
-  font-weight: 600;
-  cursor: pointer;
-  border-radius: 4px;
-  color: #6c757d;
-  transition: all 0.2s ease-in-out;
-  margin: 0;
-}
-
-/* 本線選択時のアクティブスタイル */
-#mode-mainline:checked + label {
-  background-color: #0d6efd;
-  color: #ffffff;
-  box-shadow: 0 2px 4px rgba(13, 110, 253, 0.3);
-}
-
-/* 入換選択時のアクティブスタイル（警戒色オレンジ） */
-#mode-shunting:checked + label {
-  background-color: #fd7e14;
-  color: #ffffff;
-  box-shadow: 0 2px 4px rgba(253, 126, 20, 0.3);
-}
-
-/* --- モード状態バッジ --- */
-.gear-badge {
-  display: inline-block;
-  padding: 3px 10px;
-  border-radius: 4px;
-  font-size: 0.8rem;
-  font-weight: bold;
+.panel-label {
+  font-size: 0.75rem;
+  color: #8b949e;
+  text-transform: uppercase;
   letter-spacing: 0.5px;
 }
 
-/* 本線モード時のバッジ・枠線 */
-.theme-mainline .gear-badge {
-  background-color: #e7f1ff;
-  color: #0d6efd;
-  border: 1px solid #b6d4fe;
-}
-
-.theme-mainline .chart-container {
-  border-top: 3px solid #0d6efd;
-}
-
-/* 入換モード時のバッジ・枠線 */
-.theme-shunting .gear-badge {
-  background-color: #fff3cd;
-  color: #d63384;
-  border: 1px solid #ffe69c;
-}
-
-.theme-shunting .chart-container {
-  border-top: 3px solid #fd7e14;
-}
-
-/* グラフ表示枠の固定比率 */
-.chart-container {
-  position: relative;
-  width: 100%;
-  height: 380px;
-  background: #ffffff;
+.gear-toggle-group {
+  display: inline-flex;
+  background: #21262d;
+  padding: 4px;
   border-radius: 8px;
-  padding: 12px;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
-  transition: border-top 0.3s ease;
+  border: 1px solid #30363d;
+}
+
+.gear-toggle-group input[type="radio"] {
+  display: none;
+}
+
+.btn-mode {
+  padding: 8px 18px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  cursor: pointer;
+  border-radius: 6px;
+  color: #8b949e;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* 本線アクティブ */
+#mode-mainline:checked + .btn-mainline {
+  background-color: #0d6efd;
+  color: #ffffff;
+  box-shadow: 0 0 12px rgba(13, 110, 253, 0.5);
+}
+
+/* 入換アクティブ (警戒色) */
+#mode-shunting:checked + .btn-shunting {
+  background-color: #fd7e14;
+  color: #ffffff;
+  box-shadow: 0 0 12px rgba(253, 126, 20, 0.5);
+}
+
+/* 計器盤 */
+.dashboard-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 12px;
+  margin-bottom: 24px;
+}
+
+.gauge-card {
+  background: #1c2128;
+  border: 1px solid #30363d;
+  border-radius: 8px;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.gauge-label {
+  font-size: 0.75rem;
+  color: #8b949e;
+  font-weight: 600;
+}
+
+.gauge-value {
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin: 6px 0;
+  color: #f0f6fc;
+}
+
+.gauge-value small {
+  font-size: 0.85rem;
+  font-weight: 400;
+  color: #8b949e;
+}
+
+.gauge-sub {
+  font-size: 0.75rem;
+  color: #8b949e;
+}
+
+.gauge-value.highlight {
+  color: #58a6ff;
+}
+
+.gauge-value.text-red {
+  color: #f85149;
+}
+
+.gauge-value.text-blue {
+  color: #388bfd;
+}
+
+.gauge-value.text-green {
+  color: #3fb950;
+}
+
+/* メインレイアウト */
+.main-layout {
+  display: grid;
+  grid-template-columns: 360px 1fr;
+  gap: 20px;
+}
+
+@media (max-width: 900px) {
+  .main-layout {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* 設定パネル */
+.control-panel {
+  background: #1c2128;
+  border: 1px solid #30363d;
+  border-radius: 8px;
+  padding: 20px;
+}
+
+.control-panel h2 {
+  font-size: 1.05rem;
+  font-weight: 600;
+  margin-bottom: 16px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #30363d;
+}
+
+.control-group {
+  margin-bottom: 18px;
+}
+
+.control-header {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 6px;
+  font-size: 0.85rem;
+}
+
+.control-header label {
+  color: #c9d1d9;
+  font-weight: 600;
+}
+
+.control-val {
+  color: #58a6ff;
+  font-weight: 700;
+}
+
+input[type="range"] {
+  width: 100%;
+  accent-color: #0d6efd;
+  background: #2d333b;
+  height: 6px;
+  border-radius: 3px;
+  cursor: pointer;
+}
+
+body.mode-shunting input[type="range"] {
+  accent-color: #fd7e14;
+}
+
+.scale-ticks {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.65rem;
+  color: #6e7681;
+  margin-top: 4px;
+}
+
+select {
+  width: 100%;
+  padding: 8px 10px;
+  background: #21262d;
+  border: 1px solid #30363d;
+  border-radius: 6px;
+  color: #f0f6fc;
+  font-size: 0.85rem;
+  outline: none;
+}
+
+/* グラフ枠 */
+.chart-wrapper {
+  background: #1c2128;
+  border: 1px solid #30363d;
+  border-radius: 8px;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+}
+
+.chart-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.chart-header h2 {
+  font-size: 1.05rem;
+  font-weight: 600;
+}
+
+.chart-legend-badge {
+  font-size: 0.75rem;
+  padding: 4px 10px;
+  border-radius: 4px;
+  font-weight: 700;
+}
+
+.mode-mainline .chart-legend-badge {
+  background: rgba(13, 110, 253, 0.2);
+  color: #58a6ff;
+  border: 1px solid rgba(13, 110, 253, 0.4);
+}
+
+.mode-shunting .chart-legend-badge {
+  background: rgba(253, 126, 20, 0.2);
+  color: #ff922b;
+  border: 1px solid rgba(253, 126, 20, 0.4);
+}
+
+.canvas-container {
+  position: relative;
+  flex-grow: 1;
+  min-height: 420px;
 }
