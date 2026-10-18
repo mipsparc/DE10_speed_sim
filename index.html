@@ -14,13 +14,18 @@
 
         <div class="main-layout">
             <div class="control-panel">
-                <div class="control-group">
-                  <label for="gear-mode">運転モード（減速比切替）:</label>
-                  <select id="gear-mode">
-                    <option value="mainline" selected>本線（最高 85 km/h）</option>
-                    <option value="shunting">入換（最高 45 km/h）</option>
-                  </select>
+                <div class="mode-switch-container">
+                  <span class="mode-switch-label">変速段:</span>
+                  <div class="mode-toggle-group">
+                    <input type="radio" id="mode-mainline" name="gearMode" value="mainline" checked>
+                    <label for="mode-mainline">本線 (高速)</label>
+                
+                    <input type="radio" id="mode-shunting" name="gearMode" value="shunting">
+                    <label for="mode-shunting">入換 (低速・強牽引)</label>
+                  </div>
+                  <span id="gear-mode-badge" class="gear-badge">本線（最高 85 km/h）</span>
                 </div>
+                
                 <div class="card">
                     <h3>客車編成設定 (コロ軸受)</h3>
                     <div class="input-group">
@@ -110,8 +115,8 @@
                     </div>
                 </div>
 
-                <div class="graph-container">
-                    <canvas id="trainChart"></canvas>
+                <div class="chart-container" id="chart-wrapper">
+                  <canvas id="tractionChart"></canvas>
                 </div>
             </div>
         </div>
