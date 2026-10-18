@@ -1,12 +1,8 @@
 // ==========================================
-// 1. 車両諸元 (data.json 統合データ)
+// 1. 車両諸元
 // ==========================================
 const VEHICLE_DATA = {
-  locomotive: {
-    name: "DE10形ディーゼル機関車",
-    weight: 65.0, // 自重 (t)
-    axleCount: 5  // AAA-B (5動軸)
-  },
+  locomotive: { weight: 65.0 }, // DE10 (65t)
   carTypes: {
     "12kei": { name: "12系客車", weight: 32.0, bearing: "roller" },
     "14kei": { name: "14系客車", weight: 32.5, bearing: "roller" },
@@ -18,10 +14,9 @@ const VEHICLE_DATA = {
 };
 
 // ==========================================
-// 2. 引張力データ (traction_data.json 統合データ)
+// 2. 引張力データ (入換 0-45 / 本線 0-85)
 // ==========================================
 const TRACTION_DATA = {
-  // 入換 (0 - 45 km/h)
   shunting: {
     maxSpeed: 45,
     notches: {
@@ -41,7 +36,6 @@ const TRACTION_DATA = {
       "14": [19500, 19350, 19200, 19050, 18900, 18750, 18600, 18450, 18300, 18150, 18000, 17240, 16480, 15720, 14960, 14200, 13440, 12680, 11920, 11160, 10400, 10050, 9700, 9350, 9000, 8650, 8300, 7950, 7600, 7250, 6900, 6740, 6580, 6420, 6260, 6100, 5940, 5780, 5620, 5460, 5300, 5140, 4980, 4820, 4660, 4500]
     }
   },
-  // 本線 (0 - 85 km/h)
   mainline: {
     maxSpeed: 85,
     notches: {
@@ -63,19 +57,14 @@ const TRACTION_DATA = {
   }
 };
 
-// ==========================================
-// 3. アプリケーション状態
-// ==========================================
-let currentMode = "mainline"; // "mainline" または "shunting"
+let currentMode = "mainline";
 let currentNotch = 0;
 let currentSpeed = 0.0;
 let chartInstance = null;
 
 // ==========================================
-// 4. 計算関数群
+// 3. 物理・力学計算
 // ==========================================
-
-// 引張力補間取得 (kgf)
 function getTractiveEffort(speed, notch, mode = currentMode) {
   if (notch <= 0) return 0;
   const modeData = TRACTION_DATA[mode];
@@ -95,39 +84,30 @@ function getTractiveEffort(speed, notch, mode = currentMode) {
   return f0 + (f1 - f0) * ratio;
 }
 
-// 走行抵抗計算 (kgf)
 function calculateRunningResistance(speed) {
-  const locoWeight = VEHICLE_DATA.locomotive.weight; // 65.0t
-  
-  // 機関車抵抗式 (DE10系公式 近似)
+  const locoWeight = VEHICLE_DATA.locomotive.weight;
   const r_loco = (1.8 + 0.015 * speed + 0.00035 * speed * speed) * locoWeight;
 
-  // 被牽引車両
   const carTypeKey = document.getElementById("car-type")?.value || "12kei";
   const carCount = parseInt(document.getElementById("car-count")?.value, 10) || 0;
   const carSpec = VEHICLE_DATA.carTypes[carTypeKey];
   const totalCarWeight = carSpec.weight * carCount;
 
-  // 車両抵抗
   let r_cars = 0;
   if (totalCarWeight > 0) {
     if (carSpec.bearing === "plain") {
-      // 平軸受 (ワム80000など)
       r_cars = (2.4 + 0.012 * speed + 0.00040 * speed * speed) * totalCarWeight;
     } else {
-      // コロ軸受 (12系、50系、コキなど)
       r_cars = (1.6 + 0.008 * speed + 0.00025 * speed * speed) * totalCarWeight;
     }
   }
 
-  // 勾配抵抗 (kgf) = 総重量(t) * 勾配(‰)
   const gradient = parseFloat(document.getElementById("gradient-slider")?.value) || 0;
   const r_grade = (locoWeight + totalCarWeight) * gradient;
 
   return r_loco + r_cars + r_grade;
 }
 
-// 均衡速度の計算
 function calculateBalancingSpeed() {
   if (currentNotch === 0) return 0;
   const maxV = TRACTION_DATA[currentMode].maxSpeed;
@@ -143,85 +123,44 @@ function calculateBalancingSpeed() {
 }
 
 // ==========================================
-// 5. 画面更新 & グラフ描画
+// 4. チャート初期化 & データ更新
 // ==========================================
-function updateSimulator() {
-  const modeData = TRACTION_DATA[currentMode];
-  const maxLimit = modeData.maxSpeed;
-
-  // 速度制限チェック
-  if (currentSpeed > maxLimit) {
-    currentSpeed = maxLimit;
-    const speedSlider = document.getElementById("speed-slider");
-    if (speedSlider) speedSlider.value = maxLimit;
-  }
-
-  const te = getTractiveEffort(currentSpeed, currentNotch, currentMode);
-  const rr = calculateRunningResistance(currentSpeed);
-  const balSpeed = calculateBalancingSpeed();
-  const accelForce = currentNotch > 0 ? te - rr : -rr;
-
-  // UIテキスト更新
-  document.getElementById("display-notch").textContent = currentNotch === 0 ? "0 (惰行)" : `${currentNotch} 段`;
-  document.getElementById("display-speed").innerHTML = `${currentSpeed.toFixed(1)} <small>km/h</small>`;
-  document.getElementById("display-traction").innerHTML = `${Math.round(te)} <small>kgf</small>`;
-  document.getElementById("display-resistance").innerHTML = `${Math.round(rr)} <small>kgf</small>`;
-  document.getElementById("display-balancing").innerHTML = currentNotch > 0 ? `${balSpeed.toFixed(1)} <small>km/h</small>` : "--- <small>km/h</small>";
-  
-  const accelElem = document.getElementById("display-acceleration");
-  if (accelElem) {
-    const sign = accelForce >= 0 ? "+" : "";
-    accelElem.textContent = `加速力: ${sign}${Math.round(accelForce)} kgf`;
-  }
-
-  // グラフ更新 (入換時は45km/hまで、本線時は85km/hまで)
-  updateChart(maxLimit);
-}
-
-function updateChart(maxLimit) {
-  if (!chartInstance) return;
-
-  const labels = [];
-  const currentTeData = [];
-  const resistanceData = [];
-
-  for (let v = 0; v <= maxLimit; v++) {
-    labels.push(v);
-    currentTeData.push(getTractiveEffort(v, currentNotch, currentMode));
-    resistanceData.push(Math.round(calculateRunningResistance(v)));
-  }
-
-  chartInstance.data.labels = labels;
-  chartInstance.data.datasets[0].data = currentTeData;
-  chartInstance.data.datasets[1].data = resistanceData;
-
-  // X軸の最大値を入換(45) / 本線(85)に動的同期
-  chartInstance.options.scales.x.max = maxLimit;
-  chartInstance.update();
-}
-
 function initChart() {
-  const ctx = document.getElementById("tractionChart")?.getContext("2d");
-  if (!ctx) return;
+  if (typeof Chart === "undefined") {
+    console.error("Chart.js が読み込まれていません。");
+    const errorMsg = document.getElementById("chart-error-msg");
+    if (errorMsg) errorMsg.style.display = "block";
+    return;
+  }
+
+  const canvas = document.getElementById("tractionChart");
+  if (!canvas) return;
+  const ctx = canvas.getContext("2d");
+
+  // 初期データ (本線 0-85 km/h) をあらかじめ構築
+  const maxSpeed = TRACTION_DATA[currentMode].maxSpeed;
+  const initialLabels = Array.from({ length: maxSpeed + 1 }, (_, i) => i);
+  const initialTeData = initialLabels.map(v => getTractiveEffort(v, currentNotch, currentMode));
+  const initialRrData = initialLabels.map(v => Math.round(calculateRunningResistance(v)));
 
   chartInstance = new Chart(ctx, {
     type: "line",
     data: {
-      labels: [],
+      labels: initialLabels,
       datasets: [
         {
           label: "引張力 (選択ノッチ)",
-          data: [],
+          data: initialTeData,
           borderColor: "#f85149",
-          backgroundColor: "rgba(248, 81, 73, 0.1)",
+          backgroundColor: "rgba(248, 81, 73, 0.15)",
           borderWidth: 2.5,
           pointRadius: 0,
-          tension: 0.1,
-          fill: true
+          fill: true,
+          tension: 0.1
         },
         {
           label: "総走行抵抗 (勾配抵抗込)",
-          data: [],
+          data: initialRrData,
           borderColor: "#388bfd",
           backgroundColor: "rgba(56, 139, 253, 0.1)",
           borderWidth: 2,
@@ -233,13 +172,12 @@ function initChart() {
     options: {
       responsive: true,
       maintainAspectRatio: false,
+      animation: false, // 切り替え時の追従をスムーズに
       scales: {
         x: {
           title: { display: true, text: "速度 (km/h)", color: "#8b949e" },
           grid: { color: "#30363d" },
-          ticks: { color: "#8b949e" },
-          min: 0,
-          max: 85
+          ticks: { color: "#8b949e" }
         },
         y: {
           title: { display: true, text: "力 (kgf)", color: "#8b949e" },
@@ -258,67 +196,110 @@ function initChart() {
   });
 }
 
+function updateChart() {
+  if (!chartInstance) return;
+
+  const maxSpeed = TRACTION_DATA[currentMode].maxSpeed; // 入換時は 45, 本線時は 85
+  const labels = Array.from({ length: maxSpeed + 1 }, (_, i) => i);
+  const teData = labels.map(v => getTractiveEffort(v, currentNotch, currentMode));
+  const rrData = labels.map(v => Math.round(calculateRunningResistance(v)));
+
+  // labels を 0〜45 (または 0〜85) に更新することで X軸の表示幅を制限
+  chartInstance.data.labels = labels;
+  chartInstance.data.datasets[0].data = teData;
+  chartInstance.data.datasets[1].data = rrData;
+  chartInstance.update();
+}
+
 // ==========================================
-// 6. イベントバインド & 初期化
+// 5. 画面UI更新
+// ==========================================
+function updateSimulator() {
+  const modeData = TRACTION_DATA[currentMode];
+  const maxLimit = modeData.maxSpeed;
+
+  if (currentSpeed > maxLimit) {
+    currentSpeed = maxLimit;
+    const speedSlider = document.getElementById("speed-slider");
+    if (speedSlider) speedSlider.value = maxLimit;
+  }
+
+  const te = getTractiveEffort(currentSpeed, currentNotch, currentMode);
+  const rr = calculateRunningResistance(currentSpeed);
+  const balSpeed = calculateBalancingSpeed();
+  const accelForce = currentNotch > 0 ? te - rr : -rr;
+
+  document.getElementById("display-notch").textContent = currentNotch === 0 ? "0 (惰行)" : `${currentNotch} 段`;
+  document.getElementById("display-speed").innerHTML = `${currentSpeed.toFixed(1)} <small>km/h</small>`;
+  document.getElementById("display-traction").innerHTML = `${Math.round(te)} <small>kgf</small>`;
+  document.getElementById("display-resistance").innerHTML = `${Math.round(rr)} <small>kgf</small>`;
+  document.getElementById("display-balancing").innerHTML = currentNotch > 0 ? `${balSpeed.toFixed(1)} <small>km/h</small>` : "--- <small>km/h</small>";
+  
+  const accelElem = document.getElementById("display-acceleration");
+  if (accelElem) {
+    const sign = accelForce >= 0 ? "+" : "";
+    accelElem.textContent = `加速力: ${sign}${Math.round(accelForce)} kgf`;
+  }
+
+  updateChart();
+}
+
+// ==========================================
+// 6. イベントバインド
 // ==========================================
 function setupEventListeners() {
-  // 本線・入換切替
+  // 本線 / 入換 切り替え
   document.querySelectorAll('input[name="gearMode"]').forEach((radio) => {
     radio.addEventListener("change", (e) => {
       currentMode = e.target.value;
       const isShunting = currentMode === "shunting";
       const maxLimit = TRACTION_DATA[currentMode].maxSpeed;
 
-      // bodyのテーマ切替
+      // テーマクラス切り替え
       document.body.className = isShunting ? "mode-shunting" : "mode-mainline";
 
-      // 各種バッジ・ラベルの更新
       document.getElementById("chart-badge").textContent = isShunting ? "入換段 (0-45 km/h)" : "本線段 (0-85 km/h)";
       document.getElementById("display-mode-name").textContent = isShunting ? "入換ギア接続中" : "本線ギア接続中";
       document.getElementById("display-speed-limit").textContent = `最高許容: ${maxLimit} km/h`;
 
-      // 速度スライダーの上限を入換(45) or 本線(85)へ変更
+      // 速度スライダーの上限を 45 または 85 に制限
       const speedSlider = document.getElementById("speed-slider");
-      speedSlider.max = maxLimit;
-      if (currentSpeed > maxLimit) {
-        currentSpeed = maxLimit;
-        speedSlider.value = maxLimit;
-        document.getElementById("speed-val").textContent = `${maxLimit.toFixed(1)} km/h`;
+      if (speedSlider) {
+        speedSlider.max = maxLimit;
+        if (currentSpeed > maxLimit) {
+          currentSpeed = maxLimit;
+          speedSlider.value = maxLimit;
+          document.getElementById("speed-val").textContent = `${maxLimit.toFixed(1)} km/h`;
+        }
       }
 
       updateSimulator();
     });
   });
 
-  // ノッチ
-  const notchSlider = document.getElementById("notch-slider");
-  notchSlider.addEventListener("input", (e) => {
+  // ノッチスライダー
+  document.getElementById("notch-slider")?.addEventListener("input", (e) => {
     currentNotch = parseInt(e.target.value, 10);
-    document.getElementById("notch-val").textContent = currentNotch === 0 ? "0 (OFF)" : `${currentNotch} 段`;
+    document.getElementById("notch-val").textContent = currentNotch === 0 ? "0 段 (OFF)" : `${currentNotch} 段`;
     updateSimulator();
   });
 
-  // 速度
-  const speedSlider = document.getElementById("speed-slider");
-  speedSlider.addEventListener("input", (e) => {
+  // 速度スライダー
+  document.getElementById("speed-slider")?.addEventListener("input", (e) => {
     currentSpeed = parseFloat(e.target.value);
     document.getElementById("speed-val").textContent = `${currentSpeed.toFixed(1)} km/h`;
     updateSimulator();
   });
 
-  // 客車形式
-  document.getElementById("car-type").addEventListener("change", updateSimulator);
+  // 車両形式・両数・勾配
+  document.getElementById("car-type")?.addEventListener("change", updateSimulator);
 
-  // 両数
-  const carCountSlider = document.getElementById("car-count");
-  carCountSlider.addEventListener("input", (e) => {
+  document.getElementById("car-count")?.addEventListener("input", (e) => {
     document.getElementById("car-count-val").textContent = `${e.target.value} 両`;
     updateSimulator();
   });
 
-  // 勾配
-  const gradSlider = document.getElementById("gradient-slider");
-  gradSlider.addEventListener("input", (e) => {
+  document.getElementById("gradient-slider")?.addEventListener("input", (e) => {
     const val = parseFloat(e.target.value);
     const text = val === 0 ? "0.0 ‰ (平坦)" : `${val > 0 ? "+" : ""}${val.toFixed(1)} ‰`;
     document.getElementById("gradient-val").textContent = text;
@@ -326,6 +307,7 @@ function setupEventListeners() {
   });
 }
 
+// 起動
 document.addEventListener("DOMContentLoaded", () => {
   initChart();
   setupEventListeners();
