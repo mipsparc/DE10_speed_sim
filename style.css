@@ -291,3 +291,103 @@ input[type="range"]::-webkit-slider-thumb:hover {
     min-height: 420px;
     position: relative;
 }
+
+* --- 運転モード切替コンテナ --- */
+.mode-switch-container {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 20px;
+  background: #f1f3f5;
+  padding: 10px 16px;
+  border-radius: 8px;
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.mode-switch-label {
+  font-weight: bold;
+  font-size: 0.95rem;
+  color: #333;
+}
+
+/* トグルボタン（セグメントコントロール） */
+.mode-toggle-group {
+  display: inline-flex;
+  background: #e9ecef;
+  padding: 3px;
+  border-radius: 6px;
+  border: 1px solid #ced4da;
+}
+
+.mode-toggle-group input[type="radio"] {
+  display: none;
+}
+
+.mode-toggle-group label {
+  padding: 6px 18px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  border-radius: 4px;
+  color: #6c757d;
+  transition: all 0.2s ease-in-out;
+  margin: 0;
+}
+
+/* 本線選択時のアクティブスタイル */
+#mode-mainline:checked + label {
+  background-color: #0d6efd;
+  color: #ffffff;
+  box-shadow: 0 2px 4px rgba(13, 110, 253, 0.3);
+}
+
+/* 入換選択時のアクティブスタイル（警戒色オレンジ） */
+#mode-shunting:checked + label {
+  background-color: #fd7e14;
+  color: #ffffff;
+  box-shadow: 0 2px 4px rgba(253, 126, 20, 0.3);
+}
+
+/* --- モード状態バッジ --- */
+.gear-badge {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 4px;
+  font-size: 0.8rem;
+  font-weight: bold;
+  letter-spacing: 0.5px;
+}
+
+/* 本線モード時のバッジ・枠線 */
+.theme-mainline .gear-badge {
+  background-color: #e7f1ff;
+  color: #0d6efd;
+  border: 1px solid #b6d4fe;
+}
+
+.theme-mainline .chart-container {
+  border-top: 3px solid #0d6efd;
+}
+
+/* 入換モード時のバッジ・枠線 */
+.theme-shunting .gear-badge {
+  background-color: #fff3cd;
+  color: #d63384;
+  border: 1px solid #ffe69c;
+}
+
+.theme-shunting .chart-container {
+  border-top: 3px solid #fd7e14;
+}
+
+/* グラフ表示枠の固定比率 */
+.chart-container {
+  position: relative;
+  width: 100%;
+  height: 380px;
+  background: #ffffff;
+  border-radius: 8px;
+  padding: 12px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+  transition: border-top 0.3s ease;
+}
