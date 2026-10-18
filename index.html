@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>DE10形ディーゼル機関車 運転シミュレータ</title>
   <link rel="stylesheet" href="style.css">
-  <!-- Chart.js CDN (v4) -->
+  <!-- Chart.js CDN -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 </head>
 <body class="mode-mainline">
@@ -13,7 +13,7 @@
     <header>
       <div class="header-title">
         <h1>DE10形ディーゼル機関車 運転シミュレータ</h1>
-        <p class="subtitle">液体変速機（減速比切替）連動・引張力＆走行抵抗・均衡速度シミュレータ</p>
+        <p class="subtitle">液体変速機（減速比切替）連動・動輪周引張力／列車走行抵抗リアルタイム加速シミュレータ</p>
       </div>
       <div class="mode-selector-panel">
         <span class="panel-label">変速段切替 (動力台車減速比)</span>
@@ -31,13 +31,18 @@
     <section class="dashboard-grid">
       <div class="gauge-card">
         <span class="gauge-label">主幹制御器 (ノッチ)</span>
-        <div class="gauge-value" id="display-notch">0 (惰行)</div>
+        <div class="gauge-value" id="display-notch">0 (OFF)</div>
         <div class="gauge-sub" id="display-mode-name">本線ギア接続中</div>
       </div>
       <div class="gauge-card">
         <span class="gauge-label">現在速度</span>
         <div class="gauge-value highlight" id="display-speed">0.0 <small>km/h</small></div>
         <div class="gauge-sub" id="display-speed-limit">最高許容: 85 km/h</div>
+      </div>
+      <div class="gauge-card">
+        <span class="gauge-label">加速度</span>
+        <div class="gauge-value text-green" id="display-acceleration">±0.00 <small>km/h/s</small></div>
+        <div class="gauge-sub" id="display-netforce">加速余力: 0 kgf</div>
       </div>
       <div class="gauge-card">
         <span class="gauge-label">実効引張力</span>
@@ -51,48 +56,69 @@
       </div>
       <div class="gauge-card">
         <span class="gauge-label">算出 均衡速度</span>
-        <div class="gauge-value text-green" id="display-balancing">--- <small>km/h</small></div>
-        <div class="gauge-sub" id="display-acceleration">加速力: ±0 kgf</div>
+        <div class="gauge-value" id="display-balancing">--- <small>km/h</small></div>
+        <div class="gauge-sub">引張力 ＝ 抵抗の収束点</div>
       </div>
     </section>
 
-    <!-- コントロール & パラメータ設定 -->
+    <!-- 操作パネル & グラフ -->
     <div class="main-layout">
       <section class="control-panel">
         <h2>運転操作・条件設定</h2>
 
-        <!-- マスコン -->
+        <!-- マスコンノッチ (0〜14 全数表記) -->
         <div class="control-group">
           <div class="control-header">
             <label for="notch-slider">マスコンノッチ</label>
             <span class="control-val" id="notch-val">0 段 (OFF)</span>
           </div>
           <input type="range" id="notch-slider" min="0" max="14" step="1" value="0">
-          <div class="scale-ticks">
-            <span>OFF</span><span>2</span><span>4</span><span>6</span><span>8</span><span>10</span><span>12</span><span>14</span>
+          <div class="scale-ticks-all" id="notch-ticks">
+            <span data-notch="0">0</span>
+            <span data-notch="1">1</span>
+            <span data-notch="2">2</span>
+            <span data-notch="3">3</span>
+            <span data-notch="4">4</span>
+            <span data-notch="5">5</span>
+            <span data-notch="6">6</span>
+            <span data-notch="7">7</span>
+            <span data-notch="8">8</span>
+            <span data-notch="9">9</span>
+            <span data-notch="10">10</span>
+            <span data-notch="11">11</span>
+            <span data-notch="12">12</span>
+            <span data-notch="13">13</span>
+            <span data-notch="14">14</span>
           </div>
         </div>
 
-        <!-- 運転操作補助ボタン -->
-        <div class="control-group" style="display: flex; gap: 10px; margin-top: -6px;">
-          <button type="button" id="btn-brake" class="action-btn btn-brake" style="flex: 2; padding: 10px; background: #85181a; color: white; border: none; border-radius: 6px; font-weight: bold; cursor: pointer;">
-            ブレーキ (長押し)
-          </button>
-          <button type="button" id="btn-stop" class="action-btn btn-stop" style="flex: 1; padding: 10px; background: #21262d; color: #c9d1d9; border: 1px solid #30363d; border-radius: 6px; font-weight: bold; cursor: pointer;">
-            停車リセット
-          </button>
+        <!-- 停車リセット & シミュレーション速度 -->
+        <div class="control-group">
+          <button type="button" id="btn-stop" class="btn-action btn-stop">速度リセット (0 km/h 停車)</button>
         </div>
-        
-        <!-- 速度 -->
+
         <div class="control-group">
           <div class="control-header">
-            <label for="speed-slider">列車速度</label>
-            <span class="control-val" id="speed-val">0.0 km/h</span>
+            <label>シミュレーション速度倍率</label>
+            <span class="control-val" id="sim-speed-val">1x (等倍速)</span>
           </div>
-          <input type="range" id="speed-slider" min="0" max="85" step="0.5" value="0">
+          <div class="sim-speed-selector">
+            <button type="button" class="btn-times active" data-rate="1">1x (等倍)</button>
+            <button type="button" class="btn-times" data-rate="2">2x</button>
+            <button type="button" class="btn-times" data-rate="5">5x (高速検証)</button>
+          </div>
         </div>
 
-        <!-- 車両形式選択 -->
+        <!-- 速度直接スライダー -->
+        <div class="control-group">
+          <div class="control-header">
+            <label for="speed-slider">速度スライダー (手動位置調整)</label>
+            <span class="control-val" id="speed-val">0.0 km/h</span>
+          </div>
+          <input type="range" id="speed-slider" min="0" max="85" step="0.1" value="0">
+        </div>
+
+        <!-- 被牽引車両形式選択 -->
         <div class="control-group">
           <label for="car-type">被牽引車両形式</label>
           <select id="car-type">
@@ -132,9 +158,6 @@
         </div>
         <div class="canvas-container">
           <canvas id="tractionChart"></canvas>
-          <div id="chart-error-msg" class="chart-error" style="display: none;">
-            Chart.js が読み込めませんでした。インターネット接続を確認してください。
-          </div>
         </div>
       </section>
     </div>
