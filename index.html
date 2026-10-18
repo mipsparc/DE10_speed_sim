@@ -1,126 +1,94 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>DE10形ディーゼル機関車列車 運転シミュレータ</title>
-    <link rel="stylesheet" href="style.css">
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DE10形ディーゼル機関車 運転シミュレータ</title>
+  <link rel="stylesheet" href="style.css">
+  <!-- Chart.js CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
-<body>
-    <div class="container">
-        <h1>DE10形ディーゼル機関車列車 運転シミュレータ</h1>
-        <p class="subtitle">車両条件を変更すると、列車全体の速度、総抵抗と均衡速度をリアルタイムに計算・グラフ描画します。</p>
+<body class="mode-mainline">
+  <div class="container">
+    <header>
+      <div class="header-title">
+        <h1>DE10形ディーゼル機関車 運転シミュレータ</h1>
+        <p class="subtitle">液体変速機（減速比切替）連動・引張力＆走行抵抗・均衡速度シミュレータ</p>
+      </div>
+      <div class="mode-selector-panel">
+        <span class="panel-label">変速段切替 (動力台車減速比)</span>
+        <div class="gear-toggle-group">
+          <input type="radio" id="mode-mainline" name="gearMode" value="mainline" checked>
+          <label for="mode-mainline" class="btn-mode btn-mainline">本線段 (0-85 km/h)</label>
 
-        <div class="main-layout">
-            <div class="control-panel">
-                <div class="mode-switch-container">
-                  <span class="mode-switch-label">変速段:</span>
-                  <div class="mode-toggle-group">
-                    <input type="radio" id="mode-mainline" name="gearMode" value="mainline" checked>
-                    <label for="mode-mainline">本線 (高速)</label>
-                
-                    <input type="radio" id="mode-shunting" name="gearMode" value="shunting">
-                    <label for="mode-shunting">入換 (低速・強牽引)</label>
-                  </div>
-                  <span id="gear-mode-badge" class="gear-badge">本線（最高 85 km/h）</span>
-                </div>
-                
-                <div class="card">
-                    <h3>客車編成設定 (コロ軸受)</h3>
-                    <div class="input-group">
-                        <div class="label-val">
-                            <label for="passCount">客車両数</label>
-                            <span id="passCountVal">5</span><span> 両</span>
-                        </div>
-                        <input type="range" id="passCount" min="0" max="20" value="5">
-                    </div>
-                    <div class="input-group">
-                        <div class="label-val">
-                            <label for="passWeight">客車総重量</label>
-                            <span id="passWeightVal">200</span><span> トン</span>
-                        </div>
-                        <input type="range" id="passWeight" min="0" max="1000" step="10" value="200">
-                    </div>
-                </div>
-
-                <div class="card">
-                    <h3>貨車編成設定 (一般平軸受)</h3>
-                    <div class="input-group">
-                        <div class="label-val">
-                            <label for="freightCount">貨車両数</label>
-                            <span id="freightCountVal">0</span><span> 両</span>
-                        </div>
-                        <input type="range" id="freightCount" min="0" max="40" value="0">
-                    </div>
-                    <div class="input-group">
-                        <div class="label-val">
-                            <label for="freightWeight">貨車総重量</label>
-                            <span id="freightWeightVal">0</span><span> トン</span>
-                        </div>
-                        <input type="range" id="freightWeight" min="0" max="1500" step="10" value="0">
-                    </div>
-                </div>
-
-                <div class="card bg-dark">
-                    <h3>運転制御</h3>
-
-                    <button id="startBtn" class="btn-main">運転開始</button>
-
-                    <div class="input-group">
-                        <div class="label-val">
-                            <label for="notch">主幹制御器 (マスコン)</label>
-                            <span id="notchVal" class="text-main-green">0</span><span id="notchStatus" class="text-main-green"> (惰行)</span>
-                        </div>
-                        <input type="range" id="notch" min="0" max="14" value="0">
-                    </div>
-
-                    <div class="input-group highlight-group" style="margin-top: 15px;">
-                        <div class="label-val">
-                            <label for="currentSpeed">手動速度調整</label>
-                            <span id="currentSpeedVal">0</span><span> km/h</span>
-                        </div>
-                        <input type="range" id="currentSpeed" min="0" max="85" value="0">
-                    </div>
-                </div>
-
-            </div>
-
-            <div class="display-area">
-                <div class="meter-grid">
-                    <div class="meter-card highlight-meter">
-                        <div class="meter-title">速度計</div>
-                        <div class="meter-value text-purple" id="dispCurrentSpeed">0.0 <span class="m-unit">km/h</span></div>
-                        <div class="meter-sub">リアルタイム列車速度</div>
-                    </div>
-                    <div class="meter-card">
-                        <div class="meter-title">列車総重量</div>
-                        <div class="meter-value" id="dispTotalWeight">--- <span class="m-unit">t</span></div>
-                        <div class="meter-sub">機関車(65t)含む</div>
-                    </div>
-                    <div class="meter-card">
-                        <div class="meter-title">総走行抵抗</div>
-                        <div class="meter-value text-res-red" id="dispTotalRes">--- <span class="m-unit">kg</span></div>
-                        <div class="meter-sub">機関車+被牽引車両の合計</div>
-                    </div>
-                    <div class="meter-card" id="tractiveCard">
-                        <div class="meter-title">DE10引張力</div>
-                        <div class="meter-value text-trac-green" id="dispTractive">--- <span class="m-unit">kg</span></div>
-                        <div class="meter-sub" id="dispTractiveSub">惰行中</div>
-                    </div>
-                    <div class="meter-card" id="balanceCard">
-                        <div class="meter-title">列車加速状態</div>
-                        <div class="meter-value" id="dispStatus">---</div>
-                        <div class="meter-sub" id="dispStatusSub">引張力 vs 抵抗</div>
-                    </div>
-                </div>
-
-                <div class="chart-container" id="chart-wrapper">
-                  <canvas id="tractionChart"></canvas>
-                </div>
-            </div>
+          <input type="radio" id="mode-shunting" name="gearMode" value="shunting">
+          <label for="mode-shunting" class="btn-mode btn-shunting">入換段 (0-45 km/h)</label>
         </div>
-    </div>
-    <script src="app.js"></script>
-</body>
-</html>
+      </div>
+    </header>
+
+    <!-- 計器盤・ダッシュボード -->
+    <section class="dashboard-grid">
+      <div class="gauge-card">
+        <span class="gauge-label">主幹制御器 (ノッチ)</span>
+        <div class="gauge-value" id="display-notch">0 (惰行)</div>
+        <div class="gauge-sub" id="display-mode-name">本線ギア接続中</div>
+      </div>
+      <div class="gauge-card">
+        <span class="gauge-label">現在速度</span>
+        <div class="gauge-value highlight" id="display-speed">0.0 <small>km/h</small></div>
+        <div class="gauge-sub" id="display-speed-limit">最高許容: 85 km/h</div>
+      </div>
+      <div class="gauge-card">
+        <span class="gauge-label">実効引張力</span>
+        <div class="gauge-value text-red" id="display-traction">0 <small>kgf</small></div>
+        <div class="gauge-sub">動輪周引張力</div>
+      </div>
+      <div class="gauge-card">
+        <span class="gauge-label">総走行抵抗</span>
+        <div class="gauge-value text-blue" id="display-resistance">0 <small>kgf</small></div>
+        <div class="gauge-sub">列車抵抗 + 勾配抵抗</div>
+      </div>
+      <div class="gauge-card">
+        <span class="gauge-label">算出 均衡速度</span>
+        <div class="gauge-value text-green" id="display-balancing">0.0 <small>km/h</small></div>
+        <div class="gauge-sub" id="display-acceleration">加速力: ±0 kgf</div>
+      </div>
+    </section>
+
+    <!-- コントロール & パラメータ設定 -->
+    <div class="main-layout">
+      <section class="control-panel">
+        <h2>運転操作・条件設定</h2>
+
+        <!-- マスコン -->
+        <div class="control-group">
+          <div class="control-header">
+            <label for="notch-slider">マスコンノッチ</label>
+            <span class="control-val" id="notch-val">0 段</span>
+          </div>
+          <input type="range" id="notch-slider" min="0" max="14" step="1" value="0">
+          <div class="scale-ticks">
+            <span>OFF</span><span>2</span><span>4</span><span>6</span><span>8</span><span>10</span><span>12</span><span>14</span>
+          </div>
+        </div>
+
+        <!-- 速度 -->
+        <div class="control-group">
+          <div class="control-header">
+            <label for="speed-slider">列車速度</label>
+            <span class="control-val" id="speed-val">0.0 km/h</span>
+          </div>
+          <input type="range" id="speed-slider" min="0" max="85" step="0.5" value="0">
+        </div>
+
+        <!-- 車両形式選択 (data.jsonの諸元) -->
+        <div class="control-group">
+          <label for="car-type">被牽引車両形式</label>
+          <select id="car-type">
+            <option value="12kei">12系客車 (コロ軸受・自重32.0t)</option>
+            <option value="14kei">14系客車 (コロ軸受・自重32.5t)</option>
+            <option value="50kei">50系客車 (コロ軸受・自重28.0t)</option>
+            <option value="koki50000">コキ50000系 (積車・44.0t)</option>
+            <option value="koki_empty">コキ50000系 (空車・15.0t)</option>
+            <option value="wam80000">ワム80000
